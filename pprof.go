@@ -24,9 +24,9 @@ type closer struct {
 
 // Close allows closer to implement the Closer interface
 func (c closer) Close() {
+	pprof.StopCPUProfile()
 	c.fCPU.Close()
 	c.fMem.Close()
-	pprof.StopCPUProfile()
 }
 
 // Profile profiles your app
