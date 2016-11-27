@@ -17,36 +17,57 @@ type Closer interface {
 	Close()
 }
 
-// closer represents the profile closer
-type closer struct {
-	fCPU, fMem *os.File
-}
-
-// Close allows closer to implement the Closer interface
-func (c closer) Close() {
-	pprof.StopCPUProfile()
-	c.fCPU.Close()
-	c.fMem.Close()
-}
-
 // Profile profiles your app
 func Profile() (Closer, error) {
+	// Init profiler
+	var p = NewProfiler()
+
 	// CPU
-	var c closer
 	var err error
 	if *profileCPU {
-		if c.fCPU, err = os.Create("./profile.cpu"); err != nil {
-			return c, err
+		p.profilingCPU = true
+		if p.fCPU, err = os.Create("./profile.cpu"); err != nil {
+			return p, err
 		}
-		pprof.StartCPUProfile(c.fCPU)
+		pprof.StartCPUProfile(p.fCPU)
 	}
 
 	// Memory
 	if *profileMem {
-		if c.fMem, err = os.Create("./profile.mem"); err != nil {
-			return c, err
+		p.profilingMem = true
+		if p.fMem, err = os.Create("./profile.mem"); err != nil {
+			return p, err
 		}
-		pprof.WriteHeapProfile(c.fMem)
 	}
-	return c, nil
+	return p, nil
+}
+
+// Profiler represents a profiler
+type Profiler struct {
+	fCPU, fMem                 *os.File
+	profilingCPU, profilingMem bool
+}
+
+// NewProfiler creates a new profiler
+func NewProfiler() Profiler {
+	return Profiler{}
+}
+
+// Close allows profiler to implement the Closer interface
+func (p Profiler) Close() {
+	// Stop profiling
+	if p.profilingCPU {
+		pprof.StopCPUProfile()
+	}
+	if p.profilingMem {
+		pprof.WriteHeapProfile(p.fMem)
+	}
+
+	// Close files
+	if p.fCPU != nil {
+		p.fCPU.Close()
+	}
+	if p.fMem != nil {
+		p.fMem.Close()
+	}
 }
